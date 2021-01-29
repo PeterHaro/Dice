@@ -20,6 +20,7 @@ namespace SintefSemantic.Commands.Semantic
             this.actionContextAccessor = actionContextAccessor;
         }
         
+        //TODO: FIX TO WORK ON LINUX CONTAINER. DO INTEROPERABLE
         public async Task<IActionResult> ExecuteAsync(string requestForQuotation, CancellationToken cancellationToken)
         {
             Rfq rfq = Rfq.FromJson(requestForQuotation);
@@ -35,7 +36,30 @@ namespace SintefSemantic.Commands.Semantic
                 } */
             }
             //Perform matching here:
+            string filepath = Path.Combine(this._hostingEnvironment.WebRootPath, "Matchmaking.jar");
+            string args = "/C java -jar " + filepath;
+            string standaloneArguments = "java -jar Matchmaking.jar" + " " + HttpUtility.JavaScriptStringEncode(parameter.ToJson());
+            string complete_args = args + " " + HttpUtility.JavaScriptStringEncode(parameter.ToJson());
+
+            System.Diagnostics.Process clientProcess = new Process
+            {
+                StartInfo = {FileName = "java",
+                    Arguments = @"-jar " + filepath + " " + HttpUtility.JavaScriptStringEncode(parameter.ToJson()),
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                }
+            };
+            clientProcess.Start();
+//            clientProcess.WaitForExit();
+            var result = clientProcess.StandardOutput.ReadToEnd();
+            var isError = clientProcess.StandardError.ReadToEnd();
+            int code = clientProcess.ExitCode;
+            Console.WriteLine(code);
+            Console.WriteLine();
             
+            bool isErr = result.Split('\n').Length > 5;
+
+            return isErr ? new OkObjectResult(isError) : new OkObjectResult(result);
             
             
             //lalalala
